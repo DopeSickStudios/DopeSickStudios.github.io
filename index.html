@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#f3e3c3">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Marigold Lane">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="icon-180.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="format-detection" content="telephone=no">
+    <title>Marigold Lane</title>
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABPklEQVR42mNkIBJYa6n9ZyABHL12i5EYdUwMAwxYiPXxnhkSKPJvTtxD4YtYKKHwXTIY/hMTIgMeAoy4fI7Lx+g+RQe41LlkvMAaEoM3DeDyEYx//8pvFHWKOqxY1REKscETAuhxj+6D03Nuovj0xFtW1BCA0jB1pinqKObsmaGEkjtgaWHwpQH0/I0ex8sPYjcIJh5pz4o3LTEwcA2uNDDqAIw0gJ6PYQCW72FxjJ4WIu1R1YlYYDeXYcGLIVYXUKskHLp1AS4foccxqbXm4E0D1GsRvSCqjTh4Q4BQiOgXQELk1pW3DAwMDAzf9/we4q1iQu1+mI+orW7gQwDmUlicwgAsbuEhxEBczwhmHqcLartATUcYVeEESMto4EMAnlonMPynpsHoueLinheDMw0wkqsRPZUTm+8HXTkAAPMLpnx6OiYMAAAAAElFTkSuQmCC">
+    <style>
+      html, body { margin: 0; background: #f3e3c3; color: #3b2a26; }
+    </style>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <!--
+      Marigold Lane page template (Unity 6 Web build).
+      Nothing here but the game: one canvas that fills the visible viewport, a loading screen (on phones
+      and tablets with a short "How to play", and a Play button on the first visit), a "please rotate" screen
+      for phones held upright, and a text box of the page's own for browsers that show no prompt. No external
+      files, fonts or scripts. Added to an iPhone's Home Screen the page opens without browser bars
+      (apple-touch-icon, manifest.webmanifest); that copy keeps its own saves.
+
+      Canvas size: CSS decides how large the canvas is shown (the stage: 100vw x 100dvh inside the safe
+      area). Unity keeps the drawing buffer at shown size x device pixel ratio by itself
+      (matchWebGLToCanvasSize = true); on touch devices the ratio is capped at 2 through
+      config.devicePixelRatio. Until the engine runs, this page sets the buffer to the same size.
+
+      Contract with Assets/Game/Plugins/WebGL/MarigoldPlatform.jslib: window.MarigoldHost.blocked is true
+      while the rotate screen is up (the game then counts as hidden and pauses) and every change is
+      announced with a "marigoldhostchange" event on window. MarigoldHost.gesture turns true at the
+      player's first click, tap or key press, even if that happens while the game is still loading.
+      The finished engine instance is published as window.unityInstance.
+    -->
+    <div id="ml-stage">
+      <canvas id="unity-canvas" tabindex="-1" aria-label="Marigold Lane"></canvas>
+    </div>
+
+    <div id="ml-loading">
+      <div class="ml-card" id="ml-load-card">
+       <div id="ml-load-main">
+        <img id="ml-mark" alt="" width="96" height="96" draggable="false" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABPklEQVR42mNkIBJYa6n9ZyABHL12i5EYdUwMAwxYiPXxnhkSKPJvTtxD4YtYKKHwXTIY/hMTIgMeAoy4fI7Lx+g+RQe41LlkvMAaEoM3DeDyEYx//8pvFHWKOqxY1REKscETAuhxj+6D03Nuovj0xFtW1BCA0jB1pinqKObsmaGEkjtgaWHwpQH0/I0ex8sPYjcIJh5pz4o3LTEwcA2uNDDqAIw0gJ6PYQCW72FxjJ4WIu1R1YlYYDeXYcGLIVYXUKskHLp1AS4foccxqbXm4E0D1GsRvSCqjTh4Q4BQiOgXQELk1pW3DAwMDAzf9/we4q1iQu1+mI+orW7gQwDmUlicwgAsbuEhxEBczwhmHqcLartATUcYVeEESMto4EMAnlonMPynpsHoueLinheDMw0wkqsRPZUTm+8HXTkAAPMLpnx6OiYMAAAAAElFTkSuQmCC">
+        <h1 id="ml-title">Marigold Lane</h1>
+        <div id="ml-progress">
+          <div id="ml-bar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="ml-bar-fill"></div></div>
+          <p id="ml-percent">Loading&hellip; 0%</p>
+        </div>
+        <div id="ml-start" class="ml-hide">
+          <button type="button" id="ml-play" class="ml-button">Play</button>
+        </div>
+        <div id="ml-notice" class="ml-hide">
+          <p id="ml-notice-text" role="alert"></p>
+          <p id="ml-notice-detail" class="ml-hide"></p>
+          <div class="ml-buttons">
+            <button type="button" id="ml-notice-main" class="ml-button"></button>
+            <button type="button" id="ml-notice-other" class="ml-button ml-quiet ml-hide"></button>
+          </div>
+        </div>
+        <noscript><p>Marigold Lane needs JavaScript. Please switch it on for this page and reload.</p></noscript>
+       </div>
+       <div id="ml-howto" class="ml-hide">
+        <h2 id="ml-howto-title">How to play</h2>
+        <p>You have inherited Gran's pet shop. Care for the animals, open the shop, and find each one a good home.</p>
+        <ul>
+          <li><b>Walk</b> Tap a spot, or steer with the stick at the bottom left.</li>
+          <li><b>Use</b> Tap an animal, a shelf or a person, or press the round button at the bottom right.</li>
+          <li><b>Menus</b> Your journal, decorating and the menu are at the top right.</li>
+          <li><b>Saving</b> Sleeping in your bed saves the day, on this device. Leave any time: Continue brings you back.</li>
+        </ul>
+        <p id="ml-howto-home" class="ml-small ml-hide">Full screen: tap Share, then &ldquo;Add to Home Screen&rdquo;. Do it before you start a game: the new icon keeps its own saves.</p>
+       </div>
+      </div>
+    </div>
+
+    <div id="ml-rotate" class="ml-hide" role="alertdialog" aria-labelledby="ml-rotate-title">
+      <div class="ml-card">
+        <div id="ml-phone" aria-hidden="true"></div>
+        <h2 id="ml-rotate-title">Please rotate your device</h2>
+        <p>Marigold Lane is played in landscape.</p>
+        <p class="ml-small">If the picture does not turn, switch off the rotation lock.</p>
+        <div class="ml-buttons">
+          <button type="button" id="ml-rotate-go" class="ml-button ml-hide">Turn the screen for me</button>
+          <button type="button" id="ml-rotate-stay" class="ml-button ml-quiet">Play without turning</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="ml-ask" class="ml-hide" role="dialog" aria-modal="true" aria-labelledby="ml-ask-label">
+      <div class="ml-card">
+        <label id="ml-ask-label" for="ml-ask-input"></label>
+        <input id="ml-ask-input" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done">
+        <div class="ml-buttons">
+          <button type="button" id="ml-ask-ok" class="ml-button">OK</button>
+          <button type="button" id="ml-ask-cancel" class="ml-button ml-quiet">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="ml-hint" class="ml-hide" role="status"></div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var win = window, doc = document;
+        var canvas = doc.getElementById("unity-canvas");
+        var stage = doc.getElementById("ml-stage");
+        var loading = doc.getElementById("ml-loading");
+        var progress = doc.getElementById("ml-progress");
+        var bar = doc.getElementById("ml-bar");
+        var barFill = doc.getElementById("ml-bar-fill");
+        var percent = doc.getElementById("ml-percent");
+        var notice = doc.getElementById("ml-notice");
+        var noticeText = doc.getElementById("ml-notice-text");
+        var noticeDetail = doc.getElementById("ml-notice-detail");
+        var noticeMain = doc.getElementById("ml-notice-main");
+        var noticeOther = doc.getElementById("ml-notice-other");
+        var rotate = doc.getElementById("ml-rotate");
+        var rotateGo = doc.getElementById("ml-rotate-go");
+        var rotateStay = doc.getElementById("ml-rotate-stay");
+        var loadCard = doc.getElementById("ml-load-card");
+        var howto = doc.getElementById("ml-howto");
+        var howtoHome = doc.getElementById("ml-howto-home");
+        var startBox = doc.getElementById("ml-start");
+        var playButton = doc.getElementById("ml-play");
+        var ask = doc.getElementById("ml-ask");
+        var askLabel = doc.getElementById("ml-ask-label");
+        var askInput = doc.getElementById("ml-ask-input");
+        var askOk = doc.getElementById("ml-ask-ok");
+        var askCancel = doc.getElementById("ml-ask-cancel");
+        var hint = doc.getElementById("ml-hint");
+
+        var MAX_TOUCH_PIXEL_RATIO = 2;
+        var instance = null;          // the Unity instance once it exists
+        var started = false;          // the loader script has been requested
+        var engineStarting = false;   // downloads are done, the engine is taking over the canvas
+        var problemShown = false;     // a run-time problem was shown already (later ones only go to the console)
+        var stayUpright = false;      // the player chose "Play without turning"
+        var waitingForPlay = false;   // first visit on a phone: the game is ready, "How to play" stays until Play
+        var host = win.MarigoldHost = { blocked: false, gesture: false };
+
+        // ---------------------------------------------------------------- small helpers
+
+        function setClass(el, name, on) {
+          if (!el || !el.classList) return;
+          if (on) el.classList.add(name);
+          else el.classList.remove(name);
+        }
+
+        function show(el, on) {
+          setClass(el, "ml-hide", !on);
+        }
+
+        function setText(el, text) {
+          if (el) el.textContent = text;
+        }
+
+        function listen(target, type, handler, options) {
+          try {
+            target.addEventListener(type, function (e) {
+              try { handler(e); } catch (err) { }
+            }, options || false);
+          } catch (err) { }
+        }
+
+        function announce() {
+          try {
+            var e;
+            if (typeof win.Event === "function") e = new Event("marigoldhostchange");
+            else { e = doc.createEvent("Event"); e.initEvent("marigoldhostchange", false, false); }
+            win.dispatchEvent(e);
+          } catch (err) { }
+        }
+
+        // ---------------------------------------------------------------- device
+
+        // Phone or tablet: a touch screen whose main pointer is a finger. A laptop with a touch screen is not.
+        function touchFirst() {
+          var capable = false, coarse = false, query = null;
+          try {
+            capable = ("ontouchstart" in win) || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+            query = win.matchMedia ? win.matchMedia("(pointer: coarse)") : null;
+            if (query && query.media !== "not all") coarse = !!query.matches;
+            else coarse = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+          } catch (err) { }
+          return capable && coarse;
+        }
+
+        function pixelRatio() {
+          var ratio = win.devicePixelRatio || 1;
+          // In the narrow band of an upright phone every pixel counts: use the screen's full sharpness there.
+          if (stage.classList && stage.classList.contains("ml-band")) return Math.min(ratio, 3);
+          return touchFirst() ? Math.min(ratio, MAX_TOUCH_PIXEL_RATIO) : ratio;
+        }
+
+        function appleTouchDevice() {
+          try {
+            var ua = navigator.userAgent || "";
+            return /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+          } catch (err) {
+            return false;
+          }
+        }
+
+        // Started from the Home Screen icon (no browser bars) rather than in a browser tab.
+        function installed() {
+          try {
+            if (navigator.standalone === true) return true;
+            return !!(win.matchMedia && win.matchMedia("(display-mode: standalone)").matches);
+          } catch (err) {
+            return false;
+          }
+        }
+
+        // Nothing of the game is stored here yet. A storage that cannot be read counts as a first visit too.
+        function firstVisit() {
+          try {
+            var store = win.localStorage, i, key;
+            for (i = 0; i < store.length; i++) {
+              key = store.key(i);
+              if (key && key.indexOf("marigold.") === 0) return false;
+            }
+          } catch (err) { }
+          return true;
+        }
+
+        function dynamicViewportUnits() {
+          try {
+            return !!(win.CSS && CSS.supports && CSS.supports("height", "100dvh"));
+          } catch (err) {
+            return false;
+          }
+        }
+
+        function editingText() {
+          var el = doc.activeElement;
+          var tag = el && el.tagName ? el.tagName.toLowerCase() : "";
+          return tag === "input" || tag === "textarea";
+        }
+
+        // ---------------------------------------------------------------- layout
+
+        // Runs whenever the visible area may have changed: window resize, a phone's browser bars sliding in or
+        // out, rotation, fullscreen, coming back from the background. Safe at any time, also while loading.
+        function layout() {
+          var upright = touchFirst() && win.innerHeight > win.innerWidth;
+          var band = upright && stayUpright;
+          setClass(stage, "ml-band", band);
+
+          // Browsers without "dvh": 100vh would reach under the browser bars, so size the stage by hand.
+          if (band) stage.style.height = "";
+          else if (!dynamicViewportUnits()) stage.style.height = win.innerHeight + "px";
+
+          // A phone may leave the page scrolled after its keyboard closes. Put it back, but not while the
+          // player is typing (the browser scrolls to keep the text field in view).
+          if (!editingText() && (win.pageXOffset || win.pageYOffset)) win.scrollTo(0, 0);
+
+          // The game is made for landscape: phones and tablets held upright get the rotate screen, and the
+          // game underneath is told to wait - unless the player chose to play without turning.
+          var blocked = upright && !stayUpright;
+          show(rotate, blocked);
+          if (host.blocked !== blocked) {
+            host.blocked = blocked;
+            announce();
+          }
+
+          var ratio = pixelRatio();
+          if (!instance && !engineStarting) {
+            // While the files download: give the canvas its real drawing size, so the engine starts sharp
+            // whatever happened to the window in the meantime.
+            var w = Math.max(1, Math.round(canvas.clientWidth * ratio));
+            var h = Math.max(1, Math.round(canvas.clientHeight * ratio));
+            if (canvas.width !== w) canvas.width = w;
+            if (canvas.height !== h) canvas.height = h;
+          } else if (instance && instance.Module && touchFirst()) {
+            // Unity now matches the buffer to the shown size on its own, every frame; only keep the capped
+            // ratio current.
+            instance.Module.devicePixelRatio = ratio;
+          }
+        }
+
+        function layoutSoon() {
+          layout();
+          // Phones report the old size for a moment after turning.
+          win.setTimeout(layout, 120);
+          win.setTimeout(layout, 500);
+        }
+
+        // ---------------------------------------------------------------- loading screen
+
+        function setProgress(value) {
+          var p = Math.max(0, Math.min(1, value || 0));
+          var whole = Math.round(p * 100);
+          if (p >= 0.9) engineStarting = true;   // Unity reports 90% when the downloads are complete
+          barFill.style.width = whole + "%";
+          bar.setAttribute("aria-valuenow", String(whole));
+          setText(percent, (p >= 0.9 ? "Almost ready\u2026 " : "Loading\u2026 ") + whole + "%");
+        }
+
+        function hideLoading() {
+          waitingForPlay = false;
+          setClass(loading, "ml-done", true);
+          win.setTimeout(function () {
+            if (loading.classList && loading.classList.contains("ml-done")) show(loading, false);
+          }, 600);
+        }
+
+        // One message with one or two buttons, on the loading screen (also brought back over a running game).
+        function showNotice(text, detail, mainLabel, mainAction, otherLabel, otherAction) {
+          show(loading, true);
+          setClass(loading, "ml-done", false);
+          setClass(loading, "ml-over", !!instance);   // over a running game: let it show through
+          show(progress, false);
+          show(startBox, false);
+          show(howto, false);
+          setClass(loadCard, "ml-wide", false);
+          show(notice, true);
+          setText(noticeText, text);
+          setText(noticeDetail, detail || "");
+          show(noticeDetail, !!detail);
+          setText(noticeMain, mainLabel);
+          noticeMain.onclick = mainAction;
+          setText(noticeOther, otherLabel || "");
+          show(noticeOther, !!otherLabel);
+          noticeOther.onclick = otherAction || null;
+          try { noticeMain.focus(); } catch (err) { }
+        }
+
+        function reload() {
+          try { win.location.reload(); } catch (err) { }
+        }
+
+        function clean(message) {
+          var text = String(message === undefined || message === null ? "" : message);
+          text = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+          return text.length > 600 ? text.substring(0, 600) + "\u2026" : text;
+        }
+
+        function loadFailed(message) {
+          showNotice("The game could not be loaded. Check your connection, then try again.", clean(message), "Try again", reload);
+        }
+
+        function focusCanvas() {
+          if (editingText()) return;
+          try { canvas.focus({ preventScroll: true }); } catch (err) {
+            try { canvas.focus(); } catch (err2) { }
+          }
+        }
+
+        // ---------------------------------------------------------------- Unity
+
+        // Messages from Unity's loader. Errors are shown; warnings are developer hints and go to the console.
+        function showBanner(message, type) {
+          if (type === "error") {
+            if (instance) runtimeProblem(message);
+            else loadFailed(message);
+          } else if (win.console && console.warn) {
+            console.warn(clean(message));
+          }
+        }
+
+        // Something broke while the game was running. Unity's own answer is an alert box; show a calmer
+        // message once and let the player choose.
+        function runtimeProblem(message) {
+          if (win.console && console.error) console.error(message);
+          if (problemShown) return;
+          problemShown = true;
+          showNotice("Something went wrong. Everything up to your last save is kept: reload the page to carry on.",
+            clean(message), "Reload", reload, "Keep playing", function () {
+              hideLoading();
+              focusCanvas();
+            });
+        }
+
+        // A sound that cannot be played is not a reason to stop the game. The engine's audio code lets the
+        // browser's refusal escape as an unhandled promise rejection, which would arrive here like a crash:
+        // a browser without the AAC decoder ("NotSupportedError: Failed to load because no supported source
+        // was found", "EncodingError: Unable to decode audio data"), a track replaced while it was starting
+        // ("AbortError: The play() request was interrupted ..."), sound not yet allowed ("NotAllowedError").
+        // Such a message is noted in the console once and the game carries on, without that sound.
+        var soundProblemNoted = false;
+        function soundProblem(message) {
+          var text = String(message === undefined || message === null ? "" : message);
+          if (!/^\s*(Uncaught\s+)?(\(in promise\)\s+)?(DOMException:\s*)?(NotSupportedError|EncodingError|AbortError|NotAllowedError)\b/.test(text)) return false;
+          if (!soundProblemNoted && win.console && console.warn) {
+            soundProblemNoted = true;
+            console.warn("A sound could not be played in this browser; the game continues without it. (" + clean(text) + ")");
+          }
+          return true;
+        }
+
+        var buildUrl = ".";
+        var loaderUrl = buildUrl + "/WebGL.loader.js";
+        var config = {
+          arguments: [],
+          dataUrl: buildUrl + "/WebGL.data.unityweb",
+          frameworkUrl: buildUrl + "/WebGL.framework.js.unityweb",
+          codeUrl: buildUrl + "/WebGL.wasm.unityweb",
+          streamingAssetsUrl: "StreamingAssets",
+          companyName: "DopeCatz",
+          productName: "Marigold Lane",
+          productVersion: "1.1.2",
+          showBanner: showBanner,
+          errorHandler: function (message, filename, lineno) {
+            if (soundProblem(message)) return true;
+            runtimeProblem(message);
+            return true;
+          },
+          // Unity keeps the drawing buffer equal to the canvas's shown size times the pixel ratio.
+          matchWebGLToCanvasSize: true
+        };
+        // Phones and tablets: never render at more than twice the CSS size (desktop keeps the browser's own ratio).
+        if (touchFirst()) config.devicePixelRatio = pixelRatio();
+
+        // ---------------------------------------------------------------- big files in parts
+        //
+        // Some hosts take no file above a certain size (GitHub's upload page: 25 MB). tools/web/pages.py cuts
+        // such a build file into parts and writes their list here; in the build as Unity makes it this stays
+        // null and nothing below runs. The engine's loader still asks for the one file. That request is
+        // answered here with the parts passed through one after the other, as one stream, so the loading
+        // bar, the unpacking and the loader's own cache work as they do for the whole file. The "etag" names
+        // this exact content: when the loader asks whether its cached copy is still good, it is answered
+        // from the list, without a download.
+        var PARTS = /*MARIGOLD_PARTS*/{"WebGL.data.unityweb":{"bytes":39848724,"etag":"\"7979cb61d9f738fae0a9\"","parts":[{"url":"WebGL.data.unityweb.part1","bytes":13282908},{"url":"WebGL.data.unityweb.part2","bytes":13282908},{"url":"WebGL.data.unityweb.part3","bytes":13282908}]}};
+
+        function partsFor(input) {
+          var url = "", name;
+          try { url = typeof input === "string" ? input : (input && input.url) || String(input); } catch (err) { }
+          url = url.split("?")[0].split("#")[0];
+          for (name in PARTS) {
+            if (url === name || url.slice(-(name.length + 1)) === "/" + name) return PARTS[name];
+          }
+          return null;
+        }
+
+        function askedTag(init) {
+          try {
+            var h = init && init.headers;
+            if (!h) return "";
+            return String((typeof h.get === "function" ? h.get("If-None-Match") : h["If-None-Match"]) || "");
+          } catch (err) {
+            return "";
+          }
+        }
+
+        // One part, from byte "skip" on (a second try after a broken connection does not repeat what was
+        // already handed on). Calls give(bytes) for every piece; resolves when the part is complete.
+        function passPart(fetchIt, part, skip, give, attempt) {
+          var passed = skip;
+          return fetchIt(part.url, { cache: "default" }).then(function (response) {
+            if (!response.ok) throw new Error("The file " + part.url + " answered " + response.status + ".");
+            var seen = 0;
+            var take = function (piece) {
+              var from = Math.max(0, passed - seen);
+              seen += piece.length;
+              if (from >= piece.length) return;
+              give(from > 0 ? piece.subarray(from) : piece);
+              passed = seen;
+            };
+            var finish = function () {
+              if (seen !== part.bytes) throw new Error("The file " + part.url + " arrived incomplete (" + seen + " of " + part.bytes + " bytes).");
+            };
+            if (!response.body || !response.body.getReader) {
+              return response.arrayBuffer().then(function (buffer) { take(new Uint8Array(buffer)); finish(); });
+            }
+            var reader = response.body.getReader();
+            var pump = function () {
+              return reader.read().then(function (step) {
+                if (step.done) return finish();
+                take(step.value);
+                return pump();
+              });
+            };
+            return pump();
+          }).catch(function (err) {
+            if (attempt >= 2) throw err;
+            return new Promise(function (resolve) { win.setTimeout(resolve, 900 * (attempt + 1)); }).then(function () {
+              return passPart(fetchIt, part, passed, give, attempt + 1);
+            });
+          });
+        }
+
+        function partsResponse(fetchIt, entry) {
+          var headers = { "Content-Type": "application/octet-stream", "Content-Length": String(entry.bytes), "ETag": entry.etag };
+          try {
+            if (typeof win.ReadableStream === "function") {
+              var index = 0;
+              var stream = new ReadableStream({
+                pull: function (controller) {
+                  if (index >= entry.parts.length) { controller.close(); return; }
+                  // one part per pull: the engine reads on while the next one is on its way
+                  return passPart(fetchIt, entry.parts[index++], 0, function (bytes) { controller.enqueue(bytes); }, 0);
+                }
+              });
+              return Promise.resolve(new Response(stream, { status: 200, headers: headers }));
+            }
+          } catch (err) { }
+          // Browsers without streams of their own: fetch every part, then hand over the joined file.
+          var pieces = [], chain = Promise.resolve();
+          entry.parts.forEach(function (part) {
+            chain = chain.then(function () { return passPart(fetchIt, part, 0, function (bytes) { pieces.push(bytes.slice(0)); }, 0); });
+          });
+          return chain.then(function () { return new Response(new Blob(pieces), { status: 200, headers: headers }); });
+        }
+
+        if (PARTS && typeof win.fetch === "function") {
+          (function () {
+            var fetchIt = win.fetch.bind(win);
+            win.fetch = function (input, init) {
+              var entry = partsFor(input);
+              if (!entry || (init && init.method && init.method !== "GET")) return fetchIt(input, init);
+              if (entry.etag && askedTag(init) === entry.etag) return Promise.resolve(new Response(null, { status: 304, statusText: "Not Modified", headers: { "ETag": entry.etag } }));
+              return partsResponse(fetchIt, entry);
+            };
+          })();
+        }
+
+        function canRun() {
+          try {
+            if (typeof WebAssembly !== "object" || typeof WebAssembly.instantiate !== "function") return false;
+            var probe = doc.createElement("canvas");
+            var gl = probe.getContext("webgl2");
+            if (!gl) return false;
+            var lose = gl.getExtension("WEBGL_lose_context");
+            if (lose) lose.loseContext();
+            return true;
+          } catch (err) {
+            return false;
+          }
+        }
+
+        function ready(unityInstance) {
+          instance = unityInstance;
+          win.unityInstance = unityInstance;
+          setProgress(1);
+          if (howtoShown && firstVisit() && !problemShown) {
+            // First visit on a phone or tablet: leave "How to play" up until the player has read it. The tap
+            // on Play is also the tap browsers want before they let the game make a sound.
+            waitingForPlay = true;
+            show(progress, false);
+            show(startBox, true);
+            try { playButton.focus(); } catch (err) { }
+          } else {
+            hideLoading();
+          }
+          layout();
+          if (!waitingForPlay) focusCanvas();
+        }
+
+        // "How to play" next to the loading bar, on phones and tablets (a desktop player has the keys shown
+        // in the game and gets straight to the title).
+        var howtoShown = false;
+        function showHowto() {
+          if (!touchFirst()) return;
+          howtoShown = true;
+          show(howto, true);
+          setClass(loadCard, "ml-wide", true);
+          // Safari on an iPhone or iPad has no fullscreen for pages; the Home Screen icon is the way to get it.
+          show(howtoHome, appleTouchDevice() && !installed());
+        }
+
+        playButton.onclick = function () {
+          hideLoading();
+          focusCanvas();
+        };
+
+        function start() {
+          if (started) return;
+          started = true;
+          show(notice, false);
+          show(progress, true);
+          setProgress(0);
+          showHowto();
+          var script = doc.createElement("script");
+          script.src = loaderUrl;
+          script.onload = function () {
+            try {
+              if (typeof createUnityInstance !== "function") {
+                loadFailed("The loader script is not a Unity loader.");
+                return;
+              }
+              createUnityInstance(canvas, config, function (p) {
+                try { setProgress(p); } catch (err) { }
+              }).then(function (unityInstance) {
+                try { ready(unityInstance); } catch (err) { loadFailed(err); }
+              }, function (message) {
+                loadFailed(message);
+              });
+            } catch (err) {
+              loadFailed(err);
+            }
+          };
+          script.onerror = function () {
+            loadFailed("The file " + loaderUrl + " is missing or could not be read.");
+          };
+          doc.body.appendChild(script);
+        }
+
+        // ---------------------------------------------------------------- page behavior
+
+        // The first click, tap or key press, even during loading: the game needs to know it happened
+        // (browsers keep sound switched off until then).
+        function noteGesture(e) {
+          if (e && e.isTrusted === false) return;
+          host.gesture = true;
+        }
+        listen(win, "mousedown", noteGesture, true);
+        listen(win, "pointerup", noteGesture, true);
+        listen(win, "touchend", noteGesture, true);
+        listen(win, "keydown", noteGesture, true);
+
+        // ---- text entry
+        // The game's text fields open the browser's prompt. Some places do not show one (a page inside another
+        // page, some in-app browsers): the call then comes back empty at once. In that case this page asks with
+        // a text box of its own, and the answer is handed to the game when the field is pressed again - which
+        // the page does for the player right away.
+        (function () {
+          var nativePrompt = win.prompt, held = false, x = 0, y = 0;
+          var pressX = 0, pressY = 0;        // where the last real press on the game was
+          var promptWorks = null;            // null: not known yet
+          var answers = {};                  // prompt title -> { text, until }
+          var asking = null;                 // { title }
+          var hintTimer = 0;
+
+          listen(win, "mousedown", function (e) {
+            if (e.button !== 0 || e.isTrusted === false) return;
+            held = true; x = e.clientX; y = e.clientY;
+            if (e.target === canvas) { pressX = x; pressY = y; }
+          }, true);
+          listen(win, "mouseup", function (e) { if (e.button === 0) held = false; }, true);
+          listen(win, "touchstart", function (e) {
+            var t = e.changedTouches && e.changedTouches[0];
+            if (t && e.isTrusted !== false && e.target === canvas) { pressX = t.clientX; pressY = t.clientY; }
+          }, true);
+
+          // A press that opens the browser's prompt never gets its release: the dialog takes the mouse-up, the
+          // engine keeps the button as held, and the player's next click is lost. Hand the engine one.
+          function releaseHeld() {
+            if (!held) return;
+            win.setTimeout(function () {
+              if (!held) return;
+              held = false;
+              mouse("mouseup", x, y, 0);
+            }, 0);
+          }
+
+          function mouse(type, cx, cy, buttons) {
+            try {
+              canvas.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: win, button: 0, buttons: buttons, clientX: cx, clientY: cy }));
+            } catch (e) { }
+          }
+
+          function showHint(text) {
+            setText(hint, text);
+            show(hint, true);
+            win.clearTimeout(hintTimer);
+            hintTimer = win.setTimeout(function () { show(hint, false); }, 12000);
+          }
+
+          function closeAsk() {
+            asking = null;
+            show(ask, false);
+            try { askInput.blur(); } catch (e) { }
+            win.setTimeout(function () { layout(); focusCanvas(); }, 60);
+          }
+
+          function confirmAsk() {
+            if (!asking) return;
+            var title = asking.title, cx = pressX, cy = pressY;
+            answers[title] = { text: String(askInput.value || ""), until: Date.now() + 120000 };
+            closeAsk();
+            // Press the field again for the player: the game asks once more and gets the answer.
+            win.setTimeout(function () { mouse("mousemove", cx, cy, 0); mouse("mousedown", cx, cy, 1); }, 120);
+            win.setTimeout(function () { mouse("mouseup", cx, cy, 0); }, 220);
+            // Only if that press did not arrive (the game answers within a frame or two):
+            win.setTimeout(function () {
+              if (answers[title]) showHint(touchFirst() ? "Tap the box once more to put your text in." : "Click the box once more to put your text in.");
+            }, 2500);
+          }
+
+          function openAsk(title, value) {
+            asking = { title: title };
+            setText(askLabel, title || "Enter a name");
+            askInput.value = value === undefined || value === null ? "" : String(value);
+            show(hint, false);
+            show(ask, true);
+            // A keyboard opens only on the player's own tap on phones; on a desktop this is enough.
+            try { askInput.focus(); askInput.select(); } catch (e) { }
+          }
+
+          askOk.onclick = confirmAsk;
+          askCancel.onclick = closeAsk;
+          // The engine listens for keys on the window and takes them all for the game. While the box is open
+          // the keys are the box's: these listeners were added before the engine's, so they run first and stop
+          // the event there (the typing itself still happens).
+          var askKeys = function (e) {
+            if (!asking) return;
+            e.stopImmediatePropagation();
+            if (e.type !== "keydown") return;
+            if (e.key === "Enter") { e.preventDefault(); confirmAsk(); }
+            else if (e.key === "Escape" || e.key === "Esc") { e.preventDefault(); closeAsk(); }
+          };
+          listen(win, "keydown", askKeys, true);
+          listen(win, "keypress", askKeys, true);
+          listen(win, "keyup", askKeys, true);
+
+          win.prompt = function (message, value) {
+            var title = String(message === undefined || message === null ? "" : message);
+            var kept = answers[title];
+            if (kept) {
+              delete answers[title];
+              show(hint, false);
+              if (kept.until > Date.now()) return kept.text;
+            }
+            if (asking) return null;
+            var answer = null, absent = promptWorks === false || typeof nativePrompt !== "function";
+            if (!absent) {
+              var before = Date.now();
+              try { answer = nativePrompt.call(win, message, value); } catch (e) { answer = null; absent = true; }
+              var instant = Date.now() - before < 150;   // nobody answers a dialog this fast: there was none
+              if (promptWorks !== true && instant && (answer === null || answer === undefined || answer === "")) absent = true;
+              else promptWorks = true;
+            }
+            releaseHeld();
+            if (!absent) return answer;
+            promptWorks = false;
+            openAsk(title, value);
+            return null;
+          };
+        })();
+
+        // No context menu, text selection, image dragging or pinch zoom over the game.
+        listen(canvas, "contextmenu", function (e) { e.preventDefault(); });
+        listen(rotate, "contextmenu", function (e) { e.preventDefault(); });
+        listen(doc, "dragstart", function (e) { e.preventDefault(); });
+        listen(doc, "gesturestart", function (e) { e.preventDefault(); });
+
+        listen(win, "resize", layoutSoon);
+        listen(win, "orientationchange", layoutSoon);
+        listen(win, "pageshow", layoutSoon);
+        listen(doc, "fullscreenchange", layoutSoon);
+        listen(doc, "webkitfullscreenchange", layoutSoon);
+        if (win.visualViewport) listen(win.visualViewport, "resize", layout);
+        listen(doc, "focusout", function () { win.setTimeout(layout, 60); });
+        // Keys go to the canvas: take the focus back when the window returns to the front.
+        listen(win, "focus", function (e) {
+          if (instance && (!e || !e.target || e.target === win)) focusCanvas();
+        });
+
+        // A phone that cannot turn here (rotation lock): play in a landscape band across the upright screen.
+        rotateStay.onclick = function () {
+          stayUpright = true;
+          layoutSoon();
+          focusCanvas();
+        };
+
+        // The browser took the game's picture away (a phone does this to pages that sat in the background for
+        // long, or when memory runs short). The engine cannot draw again; the game's recovery point can.
+        listen(canvas, "webglcontextlost", function () {
+          if (!instance || problemShown) return;
+          problemShown = true;
+          showNotice("The game's picture was closed by your browser. Nothing is lost: reload, then choose Continue to pick up where you stopped.",
+            "", "Reload", reload);
+        });
+
+        // Ask the browser to keep the saved game when it tidies up storage. Browsers answer on their own
+        // (no question to the player); where the request is unknown or refused nothing changes.
+        var keepAsked = false;
+        function keepStorage() {
+          if (keepAsked) return;
+          keepAsked = true;
+          try {
+            if (navigator.storage && typeof navigator.storage.persist === "function") {
+              var asked = navigator.storage.persist();
+              if (asked && asked.then) asked.then(function (kept) { host.storageKept = !!kept; }, function () { });
+            }
+          } catch (err) { }
+        }
+        listen(win, "pointerup", keepStorage, true);
+        listen(win, "touchend", keepStorage, true);
+        listen(win, "keydown", keepStorage, true);
+
+        // Android can turn the screen for the player once the page is fullscreen; other systems cannot.
+        try {
+          if (doc.documentElement.requestFullscreen && win.screen && screen.orientation && typeof screen.orientation.lock === "function") {
+            show(rotateGo, true);
+            rotateGo.onclick = function () {
+              try {
+                var done = function () {
+                  try {
+                    var locked = screen.orientation.lock("landscape");
+                    if (locked && locked.then) locked.then(layoutSoon, function () { });
+                  } catch (err) { }
+                };
+                var asked = doc.documentElement.requestFullscreen({ navigationUI: "hide" });
+                if (asked && asked.then) asked.then(done, function () { });
+                else done();
+              } catch (err) { }
+            };
+          }
+        } catch (err) { }
+
+        layout();
+        if (canRun()) {
+          start();
+        } else {
+          showNotice("This browser cannot run " + config.productName + ". The game needs WebGL 2, which current versions of Chrome, Edge, Firefox and Safari all have. Please update your browser or try another one.",
+            "", "Try anyway", start);
+        }
+      })();
+    </script>
+  </body>
+</html>
