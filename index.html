@@ -17,7 +17,7 @@
     <style>
       html, body { margin: 0; background: #f3e3c3; color: #3b2a26; }
     </style>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="v1.2.0-87d6de-style.css">
   </head>
   <body>
     <!--
@@ -28,10 +28,18 @@
       files, fonts or scripts. Added to an iPhone's Home Screen the page opens without browser bars
       (apple-touch-icon, manifest.webmanifest); that copy keeps its own saves.
 
-      Canvas size: CSS decides how large the canvas is shown (the stage: 100vw x 100dvh inside the safe
-      area). Unity keeps the drawing buffer at shown size x device pixel ratio by itself
+      Canvas size: CSS decides how large the canvas is shown: the stage is the whole visible viewport
+      (100vw x 100dvh, in whole CSS pixels), also under a notch, rounded corners and the home indicator.
+      Unity keeps the drawing buffer at shown size x device pixel ratio by itself
       (matchWebGLToCanvasSize = true); on touch devices the ratio is capped at 2 through
       config.devicePixelRatio. Until the engine runs, this page sets the buffer to the same size.
+
+      Safe area: the page measures the device's insets (the hidden element ml-safe, padded with
+      env(safe-area-inset-*)) every time the layout runs and publishes them in CSS pixels as
+      window.MarigoldHost.insets = { left, top, right, bottom } (all zero in the upright band). The game
+      asks for them through the plugin and keeps its interface inside. Tests cannot emulate env(): they
+      set window.__marigoldTestInsets = { left, top, right, bottom } before this script runs (or later,
+      followed by a resize event).
 
       Contract with Assets/Game/Plugins/WebGL/MarigoldPlatform.jslib: window.MarigoldHost.blocked is true
       while the rotate screen is up (the game then counts as hidden and pauses) and every change is
@@ -42,6 +50,7 @@
     <div id="ml-stage">
       <canvas id="unity-canvas" tabindex="-1" aria-label="Marigold Lane"></canvas>
     </div>
+    <div id="ml-safe" aria-hidden="true"></div>
 
     <div id="ml-loading">
       <div class="ml-card" id="ml-load-card">
@@ -112,6 +121,7 @@
         var win = window, doc = document;
         var canvas = doc.getElementById("unity-canvas");
         var stage = doc.getElementById("ml-stage");
+        var safe = doc.getElementById("ml-safe");
         var loading = doc.getElementById("ml-loading");
         var progress = doc.getElementById("ml-progress");
         var bar = doc.getElementById("ml-bar");
@@ -144,7 +154,7 @@
         var problemShown = false;     // a run-time problem was shown already (later ones only go to the console)
         var stayUpright = false;      // the player chose "Play without turning"
         var waitingForPlay = false;   // first visit on a phone: the game is ready, "How to play" stays until Play
-        var host = win.MarigoldHost = { blocked: false, gesture: false };
+        var host = win.MarigoldHost = { blocked: false, gesture: false, insets: { left: 0, top: 0, right: 0, bottom: 0 } };
 
         // ---------------------------------------------------------------- small helpers
 
@@ -245,6 +255,24 @@
           return tag === "input" || tag === "textarea";
         }
 
+        // The parts of the viewport the device covers (a notch, rounded corners, the home indicator), in CSS
+        // pixels. Tests set window.__marigoldTestInsets, because env() cannot be emulated.
+        function readInsets() {
+          var none = { left: 0, top: 0, right: 0, bottom: 0 };
+          try {
+            var t = win.__marigoldTestInsets;
+            if (t) return { left: +t.left || 0, top: +t.top || 0, right: +t.right || 0, bottom: +t.bottom || 0 };
+            if (!safe || !win.getComputedStyle) return none;
+            var cs = win.getComputedStyle(safe);
+            return {
+              left: parseFloat(cs.paddingLeft) || 0, top: parseFloat(cs.paddingTop) || 0,
+              right: parseFloat(cs.paddingRight) || 0, bottom: parseFloat(cs.paddingBottom) || 0
+            };
+          } catch (err) {
+            return none;
+          }
+        }
+
         // ---------------------------------------------------------------- layout
 
         // Runs whenever the visible area may have changed: window resize, a phone's browser bars sliding in or
@@ -255,8 +283,30 @@
           setClass(stage, "ml-band", band);
 
           // Browsers without "dvh": 100vh would reach under the browser bars, so size the stage by hand.
-          if (band) stage.style.height = "";
-          else if (!dynamicViewportUnits()) stage.style.height = win.innerHeight + "px";
+          stage.style.width = "";
+          if (band || dynamicViewportUnits()) stage.style.height = "";
+          else stage.style.height = win.innerHeight + "px";
+          // Whole CSS pixels: the drawing buffer is the shown size times the pixel ratio, with no fraction of
+          // a pixel left over that would stretch the picture. The band of an upright phone also starts on a
+          // whole pixel (the style sheet centers it, which can land on half a pixel).
+          stage.style.top = ""; stage.style.transform = "";
+          try {
+            var box = stage.getBoundingClientRect();
+            var bw = Math.floor(box.width + 0.01), bh = Math.floor(box.height + 0.01);
+            if (bw > 0 && Math.abs(box.width - bw) > 0.01) stage.style.width = bw + "px";
+            if (bh > 0 && Math.abs(box.height - bh) > 0.01) stage.style.height = bh + "px";
+            if (band && bh > 0) {
+              stage.style.top = Math.max(0, Math.floor((win.innerHeight - bh) / 2)) + "px";
+              stage.style.transform = "none";
+            }
+          } catch (err) { }
+
+          // The picture fills the viewport; the game keeps its interface inside these insets. The upright
+          // band lies in the middle of the screen, clear of everything.
+          var insets = band ? { left: 0, top: 0, right: 0, bottom: 0 } : readInsets();
+          var old = host.insets || {};
+          var insetsChanged = old.left !== insets.left || old.top !== insets.top || old.right !== insets.right || old.bottom !== insets.bottom;
+          host.insets = insets;
 
           // A phone may leave the page scrolled after its keyboard closes. Put it back, but not while the
           // player is typing (the browser scrolls to keep the text field in view).
@@ -266,12 +316,15 @@
           // game underneath is told to wait - unless the player chose to play without turning.
           var blocked = upright && !stayUpright;
           show(rotate, blocked);
-          if (host.blocked !== blocked) {
+          if (host.blocked !== blocked || insetsChanged) {
             host.blocked = blocked;
             announce();
           }
 
           var ratio = pixelRatio();
+          // Sharp pixels where the screen has a whole number of its pixels per drawn pixel (see the style sheet).
+          var upscale = (win.devicePixelRatio || 1) / ratio;
+          setClass(canvas, "ml-crisp", Math.abs(upscale - Math.round(upscale)) < 0.01);
           if (!instance && !engineStarting) {
             // While the files download: give the canvas its real drawing size, so the engine starts sharp
             // whatever happened to the window in the meantime.
@@ -397,16 +450,16 @@
         }
 
         var buildUrl = ".";
-        var loaderUrl = buildUrl + "/WebGL.loader.js";
+        var loaderUrl = buildUrl + "/v1.2.0-87d6de-WebGL.loader.js";
         var config = {
           arguments: [],
-          dataUrl: buildUrl + "/WebGL.data.unityweb",
-          frameworkUrl: buildUrl + "/WebGL.framework.js.unityweb",
-          codeUrl: buildUrl + "/WebGL.wasm.unityweb",
+          dataUrl: buildUrl + "/v1.2.0-87d6de-WebGL.data.unityweb",
+          frameworkUrl: buildUrl + "/v1.2.0-87d6de-WebGL.framework.js.unityweb",
+          codeUrl: buildUrl + "/v1.2.0-87d6de-WebGL.wasm.unityweb",
           streamingAssetsUrl: "StreamingAssets",
           companyName: "DopeCatz",
           productName: "Marigold Lane",
-          productVersion: "1.1.2",
+          productVersion: "1.2.0",
           showBanner: showBanner,
           errorHandler: function (message, filename, lineno) {
             if (soundProblem(message)) return true;
@@ -428,7 +481,7 @@
         // bar, the unpacking and the loader's own cache work as they do for the whole file. The "etag" names
         // this exact content: when the loader asks whether its cached copy is still good, it is answered
         // from the list, without a download.
-        var PARTS = /*MARIGOLD_PARTS*/{"WebGL.data.unityweb":{"bytes":39848724,"etag":"\"7979cb61d9f738fae0a9\"","parts":[{"url":"WebGL.data.unityweb.part1","bytes":13282908},{"url":"WebGL.data.unityweb.part2","bytes":13282908},{"url":"WebGL.data.unityweb.part3","bytes":13282908}]}};
+        var PARTS = /*MARIGOLD_PARTS*/{"v1.2.0-87d6de-WebGL.data.unityweb":{"bytes":41711149,"etag":"\"c194f166fcb7e21f5f9c\"","parts":[{"url":"v1.2.0-87d6de-WebGL.data.unityweb.part1","bytes":13903717},{"url":"v1.2.0-87d6de-WebGL.data.unityweb.part2","bytes":13903717},{"url":"v1.2.0-87d6de-WebGL.data.unityweb.part3","bytes":13903715}]}};
 
         function partsFor(input) {
           var url = "", name;
