@@ -17,7 +17,7 @@
     <style>
       html, body { margin: 0; background: #f3e3c3; color: #3b2a26; }
     </style>
-    <link rel="stylesheet" href="v1.3.0-799d62-style.css">
+    <link rel="stylesheet" href="v1.4.0-87620d-style.css">
   </head>
   <body>
     <!--
@@ -450,16 +450,16 @@
         }
 
         var buildUrl = ".";
-        var loaderUrl = buildUrl + "/v1.3.0-799d62-WebGL.loader.js";
+        var loaderUrl = buildUrl + "/v1.4.0-87620d-WebGL.loader.js";
         var config = {
           arguments: [],
-          dataUrl: buildUrl + "/v1.3.0-799d62-WebGL.data.unityweb",
-          frameworkUrl: buildUrl + "/v1.3.0-799d62-WebGL.framework.js.unityweb",
-          codeUrl: buildUrl + "/v1.3.0-799d62-WebGL.wasm.unityweb",
+          dataUrl: buildUrl + "/v1.4.0-87620d-WebGL.data.unityweb",
+          frameworkUrl: buildUrl + "/v1.4.0-87620d-WebGL.framework.js.unityweb",
+          codeUrl: buildUrl + "/v1.4.0-87620d-WebGL.wasm.unityweb",
           streamingAssetsUrl: "StreamingAssets",
           companyName: "DopeCatz",
           productName: "Marigold Lane",
-          productVersion: "1.3.0",
+          productVersion: "1.4.0",
           showBanner: showBanner,
           errorHandler: function (message, filename, lineno) {
             if (soundProblem(message)) return true;
@@ -481,7 +481,7 @@
         // bar, the unpacking and the loader's own cache work as they do for the whole file. The "etag" names
         // this exact content: when the loader asks whether its cached copy is still good, it is answered
         // from the list, without a download.
-        var PARTS = /*MARIGOLD_PARTS*/{"v1.3.0-799d62-WebGL.data.unityweb":{"bytes":42383193,"etag":"\"9ae52b88dae4fe03dd1e\"","parts":[{"url":"v1.3.0-799d62-WebGL.data.unityweb.part1","bytes":14127731},{"url":"v1.3.0-799d62-WebGL.data.unityweb.part2","bytes":14127731},{"url":"v1.3.0-799d62-WebGL.data.unityweb.part3","bytes":14127731}]}};
+        var PARTS = /*MARIGOLD_PARTS*/{"v1.4.0-87620d-WebGL.data.unityweb":{"bytes":42426203,"etag":"\"2b3a7e45fca657020136\"","parts":[{"url":"v1.4.0-87620d-WebGL.data.unityweb.part1","bytes":14142068},{"url":"v1.4.0-87620d-WebGL.data.unityweb.part2","bytes":14142068},{"url":"v1.4.0-87620d-WebGL.data.unityweb.part3","bytes":14142067}]}};
 
         function partsFor(input) {
           var url = "", name;
