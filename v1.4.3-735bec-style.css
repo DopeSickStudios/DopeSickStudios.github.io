@@ -1,0 +1,485 @@
+/*
+  Marigold Lane page template.
+  Colors: cream #f3e3c3 (page, same as the game's paper), ink #3b2a26 (text and outlines),
+  paper #fbf3df (panels), marigold #e39a2d (accent).
+
+  Unity runs this file through its template preprocessor: keep every id selector prefixed with "ml-" or
+  "unity-" (a line that starts with a hash followed by a directive word would be read as a directive) and
+  never write three curly braces in a row.
+*/
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f3e3c3;
+  color: #3b2a26;
+  font-family: "Trebuchet MS", "Segoe UI", Tahoma, Verdana, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  /* a game page: no scrolling, zooming, pull-to-refresh, text selection or long-press menus */
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  position: fixed;
+  left: 0;
+  top: 0;
+}
+
+/* The game: fills the whole visible viewport, also under a notch, rounded corners and the home indicator.
+   The picture goes edge to edge; the game keeps everything that is read or touched inside the safe area,
+   which the page measures (the element below) and publishes as MarigoldHost.insets. */
+#ml-stage {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;    /* browsers without dynamic viewport units (the page script then sets the height) */
+  height: 100dvh;   /* the part of the window that is really visible, with or without browser bars */
+  box-sizing: border-box;
+  padding: 0;
+  background: #f3e3c3;
+}
+
+/* Never seen: its padding is the device's safe-area insets, read by the page script in CSS pixels. */
+#ml-safe {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  visibility: hidden;
+  pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* A phone that stays upright ("Play without turning"): the game keeps its landscape shape, across the
+   width of the screen. */
+#ml-stage.ml-band {
+  top: 50%;
+  height: 56.25vw;
+  padding: 0;
+  transform: translateY(-50%);
+}
+
+#unity-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #f3e3c3;
+  outline: none;
+  touch-action: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The screen has a whole number of its own pixels for every pixel the game draws (2x on a 2x screen, or a
+   2x picture on a 4x screen): scale by repeating pixels. Otherwise (a 2x picture on a 3x phone) the browser's
+   smooth scaling stays: repeated pixels would be uneven there and shimmer when the camera moves. */
+#unity-canvas.ml-crisp {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+.ml-hide {
+  display: none !important;
+}
+
+/* Text fields the engine creates for the on-screen keyboard must stay usable. */
+input,
+textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+  touch-action: manipulation;
+}
+
+/* Loading screen, also used for messages. */
+#ml-loading,
+#ml-rotate,
+#ml-ask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  /* clear of the notch, the rounded corners and the home indicator */
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: #f3e3c3;
+  text-align: center;
+}
+
+#ml-loading {
+  z-index: 10;
+  opacity: 1;
+  transition: opacity 0.45s ease;
+}
+
+#ml-loading.ml-done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#ml-loading.ml-over,
+#ml-ask {
+  background: rgba(59, 42, 38, 0.55);
+}
+
+#ml-loading.ml-over .ml-card,
+#ml-ask .ml-card {
+  background: #fbf3df;
+  border: 2px solid #3b2a26;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+#ml-rotate {
+  z-index: 20;
+}
+
+#ml-ask {
+  z-index: 30;
+  align-items: flex-start;      /* near the top: the on-screen keyboard takes the lower half */
+  padding-top: max(16px, 6vh, env(safe-area-inset-top, 0px));
+}
+
+.ml-card {
+  width: 86%;
+  max-width: 436px;
+  max-height: 100%;
+  box-sizing: border-box;
+  padding: 8px;            /* room for focus rings */
+  overflow: auto;          /* a very short window can still reach the buttons */
+  touch-action: pan-y;
+}
+
+#ml-mark {
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 6px;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+#ml-title,
+#ml-rotate-title {
+  margin: 0 0 14px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+  font-weight: bold;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+#ml-rotate-title {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.ml-card p {
+  margin: 0 0 10px;
+}
+
+.ml-small {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+#ml-bar {
+  height: 14px;
+  box-sizing: border-box;
+  border: 2px solid #3b2a26;
+  border-radius: 4px;
+  background: #fbf3df;
+  overflow: hidden;
+}
+
+#ml-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: #e39a2d;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35);
+  transition: width 0.25s linear;
+}
+
+#ml-percent {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+#ml-notice-detail {
+  max-height: 22vh;
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid rgba(59, 42, 38, 0.35);
+  border-radius: 4px;
+  background: #fbf3df;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  /* players may want to copy this into a bug report */
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+  touch-action: pan-y;
+}
+
+.ml-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ml-button {
+  min-width: 132px;
+  min-height: 44px;
+  margin: 4px 0 0;
+  padding: 9px 18px;
+  box-sizing: border-box;
+  border: 2px solid #3b2a26;
+  border-radius: 6px;
+  background: #e39a2d;
+  color: #3b2a26;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.ml-button.ml-quiet {
+  background: #fbf3df;
+}
+
+.ml-button:hover {
+  background: #f0b04c;
+}
+
+.ml-button.ml-quiet:hover {
+  background: #fffaf0;
+}
+
+.ml-button:active {
+  background: #cf8520;
+  transform: translateY(1px);
+}
+
+.ml-button.ml-quiet:active {
+  background: #ecdcb8;
+}
+
+.ml-button:focus {
+  outline: 3px solid #3b2a26;
+  outline-offset: 2px;
+}
+
+.ml-button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* "How to play" beside the loading bar, on phones and tablets. */
+.ml-card.ml-wide {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 760px;
+}
+
+#ml-howto {
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+#ml-howto-title {
+  margin: 0 0 6px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+#ml-howto p {
+  margin: 0 0 8px;
+}
+
+#ml-howto ul {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+#ml-howto li {
+  display: grid;
+  grid-template-columns: 4.4em 1fr;
+  column-gap: 8px;
+  margin: 0 0 5px;
+}
+
+#ml-howto .ml-small {
+  margin-bottom: 0;
+  font-size: 13px;
+}
+
+#ml-start {
+  margin-top: 4px;
+}
+
+@media (orientation: landscape) and (min-width: 540px) {
+  .ml-card.ml-wide {
+    flex-direction: row;
+    align-items: center;
+    gap: 26px;
+  }
+
+  .ml-wide #ml-load-main {
+    flex: 0 0 32%;
+    min-width: 170px;
+  }
+
+  .ml-wide #ml-howto {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+/* The page's own text box, for browsers that do not show the usual one. */
+#ml-ask-label {
+  display: block;
+  margin: 0 0 10px;
+  font-weight: bold;
+}
+
+#ml-ask-input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  border: 2px solid #3b2a26;
+  border-radius: 6px;
+  background: #f3e3c3;
+  color: #3b2a26;
+  font: inherit;
+  font-size: 18px;       /* 16px or more: phones do not zoom into the field */
+}
+
+#ml-ask-input:focus {
+  outline: 3px solid #e39a2d;
+  outline-offset: 1px;
+}
+
+#ml-hint {
+  position: fixed;
+  left: 50%;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  z-index: 25;
+  max-width: 86%;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  transform: translateX(-50%);
+  border: 2px solid #3b2a26;
+  border-radius: 6px;
+  background: #fbf3df;
+  color: #3b2a26;
+  font-size: 15px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* A phone outline that keeps turning onto its side. */
+#ml-phone {
+  width: 40px;
+  height: 70px;
+  margin: 0 auto 22px;
+  box-sizing: border-box;
+  border: 3px solid #3b2a26;
+  border-bottom-width: 9px;
+  border-radius: 8px;
+  background: #fbf3df;
+  animation: ml-turn 2.6s ease-in-out infinite;
+}
+
+@keyframes ml-turn {
+  0%, 20% { transform: rotate(0deg); }
+  55%, 100% { transform: rotate(-90deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #ml-loading,
+  #ml-bar-fill {
+    transition: none;
+  }
+
+  #ml-phone {
+    animation: none;
+    transform: rotate(-90deg);
+  }
+}
+
+/* Short windows: a phone on its side while the game loads. */
+@media (max-height: 430px) {
+  #ml-mark {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 2px;
+  }
+
+  #ml-title {
+    font-size: 23px;
+    margin-bottom: 10px;
+  }
+
+  #ml-notice-detail {
+    max-height: 18vh;
+  }
+
+  #ml-ask {
+    padding-top: max(8px, env(safe-area-inset-top, 0px));
+  }
+
+  #ml-howto {
+    font-size: 13px;
+  }
+
+  #ml-howto-title {
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  #ml-howto p,
+  #ml-howto ul {
+    margin-bottom: 6px;
+  }
+
+  #ml-howto li {
+    margin-bottom: 4px;
+  }
+}
