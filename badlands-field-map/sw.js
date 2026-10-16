@@ -3,7 +3,7 @@
  * - Map tiles: served from the "bfm-tiles-v1" cache when downloaded, otherwise from the network.
  * - Personal records live in IndexedDB and are never touched here.
  */
-const VERSION = 'a9d4f19d215f';
+const VERSION = 'a30385f75781';
 const APP_CACHE = `bfm-app-${VERSION}`;
 const TILE_CACHE = 'bfm-tiles-v1';
 const PRECACHE = ["./","./assets/index-Bh7RuV8I.js","./assets/index-DD26Aqxe.css","./data/index.json","./data/nasdara-core.json","./icons/apple-touch-icon.png","./icons/favicon-64.png","./icons/icon-192.png","./icons/icon-512.png","./icons/icon-maskable-512.png","./manifest.webmanifest"];
