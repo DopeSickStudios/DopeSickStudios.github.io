@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-10-16T02:30:10.616Z",
+  "packs": [
+    {
+      "packId": "nasdara-core",
+      "file": "nasdara-core.json",
+      "bytes": 11524,
+      "sha256": "9449812ddd6790fe8434b89e59b32120ec7472d810e5c5f5da37eabe22961b7f",
+      "packVersion": "2026-10-16.1"
+    }
+  ],
+  "tiles": [],
+  "note": "Public build: data derived from installed game files is not included. Import a data bundle on the device."
+}
