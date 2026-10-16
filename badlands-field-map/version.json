@@ -1,0 +1,9 @@
+{
+ "build": "2026.10.15-2358 PT",
+ "sw": "420d93013c5c",
+ "data": [
+  "nasdara-core@2026-10-16.1",
+  "nasdara-game@2026-10-16.4"
+ ],
+ "copy": "dist-pages"
+}

@@ -1,14 +1,20 @@
 {
-  "generatedAt": "2026-10-16T03:05:06.787Z",
+  "generatedAt": "2026-10-16T03:11:35.888Z",
   "packs": [
     {
       "packId": "nasdara-core",
       "file": "nasdara-core.json",
       "bytes": 11524,
-      "sha256": "d5b223c47e2fb9e848c024ba8ff20c8fc4f138ace1eab397ac09ecf13971efb3",
+      "sha256": "9d3718ab26305fdbdaee480c2bf259412c5523138057a7968d1159929d0b2d97",
       "packVersion": "2026-10-16.1"
     }
   ],
   "tiles": [],
-  "note": "Public build: data derived from installed game files is not included. Import a data bundle on the device."
+  "secure": {
+    "format": "bfm-enc-1",
+    "index": "enc/index.json.bfe",
+    "keyId": "b1a74062",
+    "packBytes": 2469922,
+    "note": "Satellite imagery, the in-game map, landmarks and names derived from the game files are stored encrypted. The private link carries the key; it is never sent to the server."
+  }
 }
