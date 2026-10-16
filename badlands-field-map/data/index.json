@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-10-16T02:30:10.616Z",
+  "generatedAt": "2026-10-16T02:54:05.865Z",
   "packs": [
     {
       "packId": "nasdara-core",
       "file": "nasdara-core.json",
       "bytes": 11524,
-      "sha256": "9449812ddd6790fe8434b89e59b32120ec7472d810e5c5f5da37eabe22961b7f",
+      "sha256": "f7ae103622cd1c47b46cf07bea0db9af7a7e4a362af324640e36b643cbae3f28",
       "packVersion": "2026-10-16.1"
     }
   ],
